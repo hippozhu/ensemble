@@ -43,7 +43,12 @@ def expert_classify_proba(base_classifiers, experts, X_test):
   
 def select_by_local_precision(base_clfs, nbrs, k):
   nn = nbrs[:, :k]
-  [np.sum(expert_train[nni], axis = 0) for nni in nn]
+  pred_train = np.vstack([bs.predict(X_train) for bs in base_clfs])
+  pred_test = np.vstack([bs.predict(X_test) for bs in base_clfs])
+  precisions = np.array([[precision_score(y_train[nni], pred_train[i,nni], average = None) for i in xrange(pred_train.shape[0])] for nni in nn])
+
+
+
 #def expert_classify_voting(base_classifiers, experts, X_test):
 
 def neighborhood_good_es(X, y, idx_fold, k):
