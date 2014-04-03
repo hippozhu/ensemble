@@ -9,6 +9,12 @@ from sklearn.cross_validation import cross_val_score
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cross_validation import StratifiedKFold
 
+def my_precision_score(y_true, y_es_pred, class_list):
+  hits = (y_true==y_es_pred)
+  groups = np.array([np.array([hits[i][np.where(y_es_pred[i]==c)] for c in class_list]) for i in xrange(y_es_pred.shape[0])])
+  mp=lambda ss:1.0*sum(ss)/len(ss) if len(ss)>0 else -1
+  return np.array([[mp(a) for a in b] for b in groups])
+
 def adaBoost(X, y, n_weaks = 100):
   clf = AdaBoostClassifier(n_estimators = n_weaks)
   score = cross_val_score(clf, X, y, cv=StratifiedKFold(y, nfold))
@@ -20,20 +26,22 @@ def local_ensemble(X, y, idx_fold = 0, k=10):
   X_train, y_train, X_test, y_test = stratifiedTrainTest(X, y, nfold, idx_fold)
   clf = AdaBoostClassifier(n_estimators = n_weaks)
   clf.fit(X_train, y_train)
+  '''
   y_pred_es_test = np.vstack([es.predict(X_test) for es in clf.estimators_])
   hits_test= np.array([y_test[i]==y_pred_es_test[:,i] for i in xrange(len(y_test))])
   y_pred_es_train =  np.vstack([es.predict(X_train)  for es in clf.estimators_])
   hits_train = np.array([y_train[i]==y_pred_es_train[:,i] for i in xrange(len(y_train))])
-
+  '''
   # get neiborhood and neighbors
   nbh = NearestNeighbors().fit(X_train)
   nbrs = nbh.kneighbors(X_test, 50, return_distance=False)
   
   # select local expert estimators
-  experts = min_hits_nbh(k, nbrs, hits_train)
+  #experts = min_hits_nbh(k, nbrs, hits_train)
 
   # classify with experts
-  y_test_pred_expert = expert_classify_proba(clf.estimators_, experts, X_test)
+  #y_test_pred_expert = expert_classify_proba(clf.estimators_, experts, X_test)
+  y_test_pred_expert = select_by_local_precision(X_train, X_test, clf.estimators_, nbrs, k)
   return accuracy_score(y_test, y_test_pred_expert)
 
 def expert_classify_proba(base_classifiers, experts, X_test):
@@ -41,13 +49,27 @@ def expert_classify_proba(base_classifiers, experts, X_test):
   labels = base_classifiers[0].classes_
   return labels[np.argmax(probas, axis = 1)] 
   
-def select_by_local_precision(base_clfs, nbrs, k):
+def select_by_local_precision(X, y, idx_fold, k=10):
+  X_train, y_train, X_test, y_test = stratifiedTrainTest(X, y, nfold, idx_fold)
+  clf = AdaBoostClassifier(n_estimators = n_weaks)
+  clf.fit(X_train, y_train)
+  # get neiborhood and neighbors
+  nbh = NearestNeighbors().fit(X_train)
+  nbrs = nbh.kneighbors(X_test, 50, return_distance=False)
   nn = nbrs[:, :k]
-  pred_train = np.vstack([bs.predict(X_train) for bs in base_clfs])
-  pred_test = np.vstack([bs.predict(X_test) for bs in base_clfs])
-  precisions = np.array([[precision_score(y_train[nni], pred_train[i,nni], average = None) for i in xrange(pred_train.shape[0])] for nni in nn])
 
-
+  pred_train = np.vstack([bs.predict(X_train) for bs in clf.estimators_])
+  pred_test = np.vstack([bs.predict(X_test) for bs in clf.estimators_])
+  #precisions = np.array([map(functools.partial(precision_score, y_train[nni], average=None), pred_train[:,nni]) for nni in nn])
+  #precisions = np.array([[precision_score(y_train[nni], pred_train[i,nni], average = None) for i in xrange(pred_train.shape[0])] for nni in nn])
+  precisions = np.array([my_precision_score(y_train[nni], pred_train[:,nni], clf.classes_) for nni in nn])
+  pos = np.array([map(lambda x:np.where(clf.classes_==x)[0][0], pred) for pred in pred_test.transpose()])
+  post_pp = np.array([[precisions[i][j][pos[i,j]] for j in xrange(pos.shape[1])] for i in xrange(pos.shape[0])])
+  post_max = np.max(post_pp, axis=1)
+  post_expert = np.array([np.where(post_pp[i]==post_max[i])[0] for i in xrange(post_pp.shape[0])])
+  expert_result = np.array([pred_test[pe,i] for i,pe in enumerate(post_expert)])
+  y_expert_test = np.array([1 if np.mean(er)>0.5 else 0 for er in expert_result], dtype=np.int32)
+  return accuracy_score(y_test, y_expert_test)
 
 #def expert_classify_voting(base_classifiers, experts, X_test):
 

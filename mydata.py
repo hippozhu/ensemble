@@ -6,21 +6,21 @@ def loadPima():
   data = np.loadtxt('/home/yzhu7/data/diabetes/pima-indians-diabetes.data', delimiter=',')
   X = data[:, :-1]
   X_scaled = preprocessing.MinMaxScaler().fit_transform(X)
-  y = data[:, -1]
+  y = data[:, -1].astype(np.int32)
   return X_scaled, y
 
 def loadBreastCancer():
   data = np.loadtxt('/home/yzhu7/data/uci/breast-cancer/breast-cancer-wisconsin.data.nomissing', delimiter=',')
   X = data[:, 1:-1]
   X_scaled = preprocessing.MinMaxScaler().fit_transform(X)
-  y = data[:, -1]
+  y = data[:, -1].astype(np.int32)
   return X_scaled, y
 
 def loadIris():
   iris = datasets.load_iris()
   X = iris.data[50:]
   X_scaled = preprocessing.MinMaxScaler().fit_transform(X)
-  y = iris.target[50:]
+  y = iris.target[50:].astype(np.int32)
   return X_scaled, y
 
 def stratifiedTrainTest(X, y, nk, idx_fold):
