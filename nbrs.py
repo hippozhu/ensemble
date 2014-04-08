@@ -1,13 +1,16 @@
-import numpy as np
 import math
-from mydata import *
+#import cProfile
+from collections import Counter
 
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, precision_score
 from sklearn.cross_validation import cross_val_score
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cross_validation import StratifiedKFold
+
+from mydata import *
 
 def my_precision_score(y_true, y_es_pred, class_list):
   hits = (y_true==y_es_pred)
@@ -68,7 +71,8 @@ def select_by_local_precision(X, y, idx_fold, k=10):
   post_max = np.max(post_pp, axis=1)
   post_expert = np.array([np.where(post_pp[i]==post_max[i])[0] for i in xrange(post_pp.shape[0])])
   expert_result = np.array([pred_test[pe,i] for i,pe in enumerate(post_expert)])
-  y_expert_test = np.array([1 if np.mean(er)>0.5 else 0 for er in expert_result], dtype=np.int32)
+  #y_expert_test = np.array([1 if np.mean(er)>0.5 else 0 for er in expert_result], dtype=np.int32)
+  y_expert_test = np.array([Counter(er).most_common(1)[0][0] for er in expert_result], dtype=np.int32)
   return accuracy_score(y_test, y_expert_test)
 
 #def expert_classify_voting(base_classifiers, experts, X_test):
@@ -114,29 +118,13 @@ def min_hits_nbh(k, nbrs, hits_train, min_threshold = 0):
     min_hits[update] = hits[update]
   return min_hits
     
-#local accuracy selection + meta learning with local accuracy feature
-#def local_accuracy_nbh():
-
-#cross_val_score(clf, X, y, cv=StratifiedKFold(y, 5))
-#cross validation accuracy:
-#Ada: [ 0.71428571, 0.81168831,  0.73376623,  0.73202614,  0.77777778] 0.7539 +- 0.0357
-#k=2: [ 0.75974025, 0.67532467,  0.75324675,  0.68831168,  0.79220779] 0.7337 +- 0.0446
-
 n_weaks=100
 nfold = 10
 if __name__ == "__main__":
   #X, y = loadIris()
   X, y = loadBreastCancer()
-  adaBoost(X, y)
   #X, y = loadPima()
-'''
-X_train, y_train, X_test, y_test = stratifiedTrainTest(X, y, 10, 0)
-clf = AdaBoostClassifier(n_estimators = n_weaks)
-clf.fit(X_train, y_train)
-y_pred_es_test = np.vstack([es.predict(X_test) for es in clf.estimators_])
-expert_test= np.array([y_test[i]==y_pred_es_test[:,i] for i in xrange(len(y_test))])
-y_pred_es_train =  np.vstack([es.predict(X_train)  for es in clf.estimators_])
-expert_train = np.array([y_train[i]==y_pred_es_train[:,i] for i in xrange(len(y_train))])
-nbh = NearestNeighbors().fit(X_train)
-nbrs = nbh.kneighbors(X_test, 50, return_distance=False)
-'''
+  adaBoost(X, y)
+  for j in xrange(5, 50, 5):
+    pp = np.array([select_by_local_precision(X, y, i, j) for i in xrange(10)])
+    print "k=%d: mean=%.4f, std=%.4f" %(j, np.mean(pp), np.std(pp))
