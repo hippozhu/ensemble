@@ -1,5 +1,4 @@
 import math
-#import cProfile
 from collections import Counter
 
 import numpy as np
@@ -7,10 +6,29 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, precision_score
 from sklearn.cross_validation import cross_val_score
-from sklearn.neighbors import NearestNeighbors
+from sklearn.neighbors import NearestNeighbors, DistanceMetric
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.cluster import AffinityPropagation
 
 from mydata import *
+
+def dist_edit(a, b):
+  return (a!=b).sum()
+
+def diversity_dist(x, y):
+  return np.sum(x==y)/float(x.shape[0])
+
+def diversity_mean(m):
+  return 2*np.tril(m, -1).sum()/float(m.shape[0] * (m.shape[0]-1))
+
+def qstats_dist(a, b):
+  N11 = np.logical_and(a, b).sum()
+  N10 = np.logical_and(a,np.logical_not(b)).sum()
+  N01 = np.logical_and(np.logical_not(a),b).sum()
+  N00 = np.logical_and(np.logical_not(a),np.logical_not(b)).sum()
+  return (N11*N00 - N01*N10)/float(N11*N00 + N01*N10) + 1
+
+#def avg_qstats(
 
 def my_precision_score(y_true, y_es_pred, class_list):
   hits = (y_true==y_es_pred)
@@ -120,11 +138,13 @@ def min_hits_nbh(k, nbrs, hits_train, min_threshold = 0):
     
 n_weaks=100
 nfold = 10
+
 if __name__ == "__main__":
   #X, y = loadIris()
-  X, y = loadBreastCancer()
-  #X, y = loadPima()
+  #X, y = loadBreastCancer()
+  X, y = loadPima()
   adaBoost(X, y)
   for j in xrange(5, 50, 5):
+  #for j in xrange(1, 10, 2):
     pp = np.array([select_by_local_precision(X, y, i, j) for i in xrange(10)])
     print "k=%d: mean=%.4f, std=%.4f" %(j, np.mean(pp), np.std(pp))
