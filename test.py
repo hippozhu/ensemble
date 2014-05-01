@@ -38,7 +38,7 @@ def affinity():
   dist = DistanceMetric.get_metric('pyfunc', func=dist_edit)
   ss = dist.pairwise(pred_train.T)
   af = AffinityPropagation(affinity='precomputed').fit(ss)
-  cc = Counter(af.cluster_centers_indices_)
+  cc = Counter(af.labels_)
   clusters = np.array([np.where(af.labels_==i)[0] for i in xrange(af.cluster_centers_indices_.shape[0])])
 
 

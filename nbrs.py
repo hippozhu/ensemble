@@ -26,10 +26,17 @@ def qstats_dist(a, b):
   N10 = np.logical_and(a,np.logical_not(b)).sum()
   N01 = np.logical_and(np.logical_not(a),b).sum()
   N00 = np.logical_and(np.logical_not(a),np.logical_not(b)).sum()
-  return (N11*N00 - N01*N10)/float(N11*N00 + N01*N10) + 1
+  return .5 * (N11*N00 - N01*N10)/(N11*N00 + N01*N10) + .5
 
-#def avg_qstats(
-
+'''
+def qstats_dist_real(a, b):
+  N11 = np.where(alogical_and(a, b).sum()
+  N10 = np.logical_and(a,np.logical_not(b)).sum()
+  N01 = np.logical_and(np.logical_not(a),b).sum()
+  N00 = np.logical_and(np.logical_not(a),np.logical_not(b)).sum()
+  product = np.multiply(a, b)
+'''
+  
 def my_precision_score(y_true, y_es_pred, class_list):
   hits = (y_true==y_es_pred)
   groups = np.array([np.array([hits[i][np.where(y_es_pred[i]==c)] for c in class_list]) for i in xrange(y_es_pred.shape[0])])
@@ -140,9 +147,10 @@ n_weaks=100
 nfold = 10
 
 if __name__ == "__main__":
-  #X, y = loadIris()
+  X, y = loadIris()
   #X, y = loadBreastCancer()
-  X, y = loadPima()
+  #X, y = loadIonosphere()
+  #X, y = loadPima()
   adaBoost(X, y)
   for j in xrange(5, 50, 5):
   #for j in xrange(1, 10, 2):
